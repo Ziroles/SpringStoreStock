@@ -3,7 +3,7 @@ package bzh.zomzog.prez.springkotlin.repository
 import bzh.zomzog.prez.springkotlin.domain.User
 import org.springframework.stereotype.Repository
 
-//@Repository
+@Repository
 class UserInMemoryRepository : UserRepository {
 
     private val map = mutableMapOf<String, User>()
