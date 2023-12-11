@@ -1,4 +1,4 @@
-package bzh.zomzog.prez.springkotlin
+package iut.r504.projet.springkotlin
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication

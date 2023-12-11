@@ -1,6 +1,6 @@
-package bzh.zomzog.prez.springkotlin.repository
+package iut.r504.projet.springkotlin.repository
 
-import bzh.zomzog.prez.springkotlin.domain.User
+import iut.r504.projet.springkotlin.domain.User
 
 interface UserRepository {
     fun create(user: User): Result<User>

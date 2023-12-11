@@ -2,8 +2,8 @@ package bzh.zomzog.prez.springkotlin.repository
 
 import assertk.assertThat
 import assertk.assertions.containsExactly
-import bzh.zomzog.prez.springkotlin.domain.User
-import bzh.zomzog.prez.springkotlin.repository.entity.UserEntity
+import iut.r504.projet.springkotlin.domain.User
+import iut.r504.projet.springkotlin.repository.entity.UserEntity
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired

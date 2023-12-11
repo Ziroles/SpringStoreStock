@@ -1,6 +1,7 @@
-package bzh.zomzog.prez.springkotlin.config
+package iut.r504.projet.springkotlin.config
 
-import bzh.zomzog.prez.springkotlin.errors.UserNotFoundError
+import iut.r504.projet.springkotlin.errors.Ensufficientquantity
+import iut.r504.projet.springkotlin.errors.UserNotFoundError
 import jakarta.validation.ConstraintViolationException
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -25,4 +26,7 @@ class HttpErrorHandler : ResponseEntityExceptionHandler() {
 
     @ExceptionHandler(UserNotFoundError::class)
     fun userNotFound(e: UserNotFoundError) = ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.message)
+
+    @ExceptionHandler(Ensufficientquantity::class)
+    fun ensufficientquantity(e: Ensufficientquantity) = ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.message)
 }

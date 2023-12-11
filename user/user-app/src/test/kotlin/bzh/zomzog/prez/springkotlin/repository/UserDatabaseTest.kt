@@ -2,7 +2,8 @@ package bzh.zomzog.prez.springkotlin.repository
 
 import assertk.assertThat
 import assertk.assertions.*
-import bzh.zomzog.prez.springkotlin.domain.User
+import iut.r504.projet.springkotlin.domain.User
+import iut.r504.projet.springkotlin.repository.UserRepository
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 

@@ -2,11 +2,12 @@ package bzh.zomzog.prez.springkotlin.controller
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import bzh.zomzog.prez.springkotlin.controller.dto.UserDTO
-import bzh.zomzog.prez.springkotlin.domain.User
-import bzh.zomzog.prez.springkotlin.repository.UserRepository
+import iut.r504.projet.springkotlin.controller.dto.UserDTO
+import iut.r504.projet.springkotlin.domain.User
+import iut.r504.projet.springkotlin.repository.UserRepository
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
+import iut.r504.projet.springkotlin.controller.UserController
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
