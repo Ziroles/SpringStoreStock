@@ -1,5 +1,6 @@
 package iut.r504.projet.springkotlin.config
 
+import iut.r504.projet.springkotlin.errors.ArticleNotFoundError
 import iut.r504.projet.springkotlin.errors.Ensufficientquantity
 import iut.r504.projet.springkotlin.errors.PanierNotFoundError
 
@@ -29,7 +30,10 @@ class HttpErrorHandler : ResponseEntityExceptionHandler() {
     fun panierNotFound(e: PanierNotFoundError) = ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.message)
 
     @ExceptionHandler(Ensufficientquantity::class)
-    fun ensufficientQuantity(e: Ensufficientquantity) = ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.message)
+    fun ensufficientQuantity(e: Ensufficientquantity) = ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(e.message)
+
+    @ExceptionHandler(ArticleNotFoundError::class)
+    fun articleNotFound(e: ArticleNotFoundError) = ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.message)
 }
 
 

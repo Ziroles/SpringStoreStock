@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import iut.r504.projet.springkotlin.errors.ArticleNotFoundError
 import iut.r504.projet.springkotlin.errors.Ensufficientquantity
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
@@ -20,6 +21,7 @@ import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.bind.annotation.RestController
 import java.io.OutputStream
+import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.LocalDate
@@ -28,50 +30,8 @@ import java.time.LocalDate
 @RestController
 @Validated
 class UserController(val userRepository: UserRepository) {
-    val urlpanier = URL("http://localhost:8082/panierapi/paniers")
-    @Operation(summary = "Create user with cart")
-    @ApiResponses(value = [
-        ApiResponse(responseCode = "201", description = "User created",
-            content = [Content(mediaType = "application/json",
-                schema = Schema(implementation = UserDTO::class)
-            )]),
-        ApiResponse(responseCode = "409", description = "User already exists",
-            content = [Content(mediaType = "application/json", schema = Schema(implementation = String::class))])])
-    @PostMapping("/users")
-    fun create(@RequestBody @Valid user: UserDTO): ResponseEntity<UserDTO> {
-        return userRepository.create(user.asUser()).fold(
-            { success ->
-                // Créer un panier pour le nouvel utilisateur
+    var urlpanier = URL("http://localhost:8082/panierapi/paniers")
 
-                val connection = urlpanier.openConnection() as HttpURLConnection
-
-                connection.requestMethod = "POST"
-                connection.setRequestProperty("Accept", "application/json")
-                connection.setRequestProperty("Content-Type", "application/json")
-                connection.doOutput = true
-
-                val jsonBody = """
-                {
-                  "userEmail": "${user.email}",
-                  "items": []
-                }
-                """.trimIndent()
-
-                val outputStream: OutputStream = connection.outputStream
-                outputStream.write(jsonBody.toByteArray(Charsets.UTF_8))
-                outputStream.flush()
-
-                val responseCode = connection.responseCode
-                val responseBody = connection.inputStream.bufferedReader().readText()
-
-
-
-                connection.disconnect()
-
-                ResponseEntity.status(HttpStatus.CREATED).body(success.asUserDTO())
-            },
-            { failure -> ResponseEntity.status(HttpStatus.CONFLICT).build() })
-    }
 
 
     @Operation(summary = "List users")
@@ -107,39 +67,7 @@ class UserController(val userRepository: UserRepository) {
         }
     }
 
-    @Operation(summary = "Update a user by email")
-    @ApiResponses(value = [
-        ApiResponse(responseCode = "200", description = "User updated",
-            content = [Content(mediaType = "application/json",
-                schema = Schema(implementation = UserDTO::class))]),
-        ApiResponse(responseCode = "400", description = "Invalid request",
-            content = [Content(mediaType = "application/json", schema = Schema(implementation = String::class))])])
-    @PutMapping("/users/{email}")
-    fun update(@PathVariable @Email email: String, @RequestBody @Valid user: UserDTO): ResponseEntity<Any> =
-        if (email != user.email) {
-            ResponseEntity.badRequest().body("Invalid email")
-        } else {
-            userRepository.update(user.asUser()).fold(
-                { success -> ResponseEntity.ok(success.asUserDTO()) },
-                { failure -> ResponseEntity.badRequest().body(failure.message) }
-            )
-        }
 
-    @Operation(summary = "Delete user by email")
-    @ApiResponses(value = [
-        ApiResponse(responseCode = "204", description = "User deleted"),
-        ApiResponse(responseCode = "400", description = "User not found",
-            content = [Content(mediaType = "application/json", schema = Schema(implementation = String::class))])
-    ])
-    @DeleteMapping("/users/{email}")
-    fun delete(@PathVariable @Email email: String): ResponseEntity<Any> {
-        val deleted = userRepository.delete(email)
-        return if (deleted == null) {
-            ResponseEntity.badRequest().body("User not found")
-        } else {
-            ResponseEntity.noContent().build()
-        }
-    }
 
     @Operation(summary = "Validate user panier")
     @ApiResponses(value = [
@@ -154,6 +82,7 @@ class UserController(val userRepository: UserRepository) {
     fun validate(@PathVariable @Email email: String): ResponseEntity<Any> {
         val user = userRepository.get(email)
 
+        try{
         return if (user != null) {
             val url = "$urlpanier/validate/${user.email}"
             val connection = URL(url).openConnection() as HttpURLConnection
@@ -161,12 +90,16 @@ class UserController(val userRepository: UserRepository) {
 
             try {
                 val responseCode = connection.responseCode
-                if (responseCode != HttpURLConnection.HTTP_OK) {
-                    // Handle errors
-                    throw Ensufficientquantity("Error: $responseCode")
+                if (responseCode == HttpURLConnection.HTTP_NOT_ACCEPTABLE) {
+
+                    throw Ensufficientquantity(email)
+                }else if(responseCode == HttpURLConnection.HTTP_NOT_FOUND){
+                    throw UserNotFoundError(email)
+                }else if (responseCode == HttpURLConnection.HTTP_BAD_REQUEST || responseCode == HttpURLConnection.HTTP_INTERNAL_ERROR){
+                    return ResponseEntity.badRequest().body("Error: $responseCode")
                 }
             } finally {
-                // Close the connection
+
                 connection.disconnect()
             }
 
@@ -177,7 +110,10 @@ class UserController(val userRepository: UserRepository) {
                     { failure -> ResponseEntity.badRequest().body(failure.message) }
                 )
         } else {
-            ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found")
+            throw UserNotFoundError(email)
+        }}catch (e: ConnectException) {
+
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Connection refused: ${e.message}")
         }
     }
     @Operation(summary = "Add article to user panier")
@@ -196,8 +132,10 @@ class UserController(val userRepository: UserRepository) {
         @RequestParam @Min(1) quantity: Int
     ): ResponseEntity<Any> {
         val user = userRepository.get(email)
-
+        try{
         return if (user != null) {
+
+
             val url = "$urlpanier/${user.email}/add-article?articleId=${articleid.toLong()}&quantite=$quantity"
             val connection = URL(url).openConnection() as HttpURLConnection
             connection.requestMethod = "PUT"
@@ -205,20 +143,25 @@ class UserController(val userRepository: UserRepository) {
             try {
                 val responseCode = connection.responseCode
                 println(responseCode)
-                if (responseCode != HttpURLConnection.HTTP_OK) {
-                    // Handle errors
-                    throw Ensufficientquantity("Error: $responseCode")
+                if (responseCode == HttpURLConnection.HTTP_NOT_FOUND ) {
+
+                    throw ArticleNotFoundError(email)
+                }else{
+                    if(responseCode == HttpURLConnection.HTTP_NOT_ACCEPTABLE){
+                        throw Ensufficientquantity(email)
+                    }else if (responseCode == HttpURLConnection.HTTP_BAD_REQUEST || responseCode == HttpURLConnection.HTTP_INTERNAL_ERROR){
+                        return ResponseEntity.badRequest().body("Error: $responseCode")
+                    }
                 }
             } finally {
-                // Close the connection
                 connection.disconnect()
             }
-
-            // Add any additional logic or response based on success
-
-            ResponseEntity.ok().build()
+            ResponseEntity.ok("Article add to user panier")
         } else {
-            ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found")
+            throw UserNotFoundError(email)
+        }} catch (e: ConnectException) {
+
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Connection Panier refused: ${e.message}")
         }
     }
 
@@ -238,29 +181,42 @@ class UserController(val userRepository: UserRepository) {
         @RequestParam @Min(1) quantity: Int
     ): ResponseEntity<Any> {
         val user = userRepository.get(email)
+        try{
 
-        return if (user != null) {
-            val url = "$urlpanier/${user.email}/remove-article?articleid=$articleid&quantity=$quantity"
-            val connection = URL(url).openConnection() as HttpURLConnection
-            connection.requestMethod = "PATCH"
+            return if (user != null) {
+                val url = "$urlpanier/${user.email}/remove-article?articleId=$articleid&quantite=$quantity"
+                val connection = URL(url).openConnection() as HttpURLConnection
+                connection.requestMethod = "PUT"
 
-            try {
-                val responseCode = connection.responseCode
-                if (responseCode != HttpURLConnection.HTTP_OK) {
-                    // Handle errors
-                    throw Ensufficientquantity("Error: $responseCode")
+                try {
+                    val responseCode = connection.responseCode
+                    if (responseCode == HttpURLConnection.HTTP_NOT_ACCEPTABLE) {
+
+                        throw Ensufficientquantity("Error: $responseCode")
+                    }else if(responseCode == HttpURLConnection.HTTP_NOT_FOUND){
+                        throw ArticleNotFoundError(email)
+
+                    } else if (responseCode == HttpURLConnection.HTTP_BAD_REQUEST || responseCode == HttpURLConnection.HTTP_INTERNAL_ERROR){
+                        return ResponseEntity.badRequest().body("Error: $responseCode")
+                    }
+                } finally {
+
+                    connection.disconnect()
                 }
-            } finally {
-                // Close the connection
-                connection.disconnect()
+
+
+
+                ResponseEntity.ok("article deleted from user panier")
+            } else {
+                throw UserNotFoundError(email)
             }
+        } catch (e: ConnectException) {
 
-            // Add any additional logic or response based on success
-
-            ResponseEntity.ok().build()
-        } else {
-            ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found")
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Connection refused: ${e.message}")
         }
+
+
+
     }
     @Operation(summary = "User change state of newletter")
     @ApiResponses(value = [
@@ -269,10 +225,10 @@ class UserController(val userRepository: UserRepository) {
                 schema = Schema(implementation = UserDTO::class))]),
         ApiResponse(responseCode = "404", description = "Panier not found")
     ])
-    @PatchMapping("/paniers/{id}/change-newletter")
-    fun changeNewletter(@PathVariable id: String): ResponseEntity<Any> {
-        val user = userRepository.get(id)
-        return if (userRepository.get(id) != null) {
+    @PatchMapping("/paniers/{email}/change-newletter")
+    fun changeNewletter(@PathVariable email: String): ResponseEntity<Any> {
+        val user = userRepository.get(email)
+        return if (userRepository.get(email) != null) {
             val updatedPanier = user!!.copy( newsletterfollower =  !user.newsletterfollower)
             userRepository.update(updatedPanier)
                 .fold(
@@ -280,7 +236,7 @@ class UserController(val userRepository: UserRepository) {
                     { failure -> ResponseEntity.badRequest().body(failure.message) }
                 )
         } else {
-            throw UserNotFoundError("Panier not found")
+            throw UserNotFoundError(email)
         }
     }
 
@@ -291,10 +247,10 @@ class UserController(val userRepository: UserRepository) {
                 schema = Schema(implementation = UserDTO::class))]),
         ApiResponse(responseCode = "404", description = "Panier not found")
     ])
-    @PatchMapping("/paniers/{id}/update-adresse")
-    fun updateAdresse(@PathVariable id: String, @RequestParam Newadresse: String): ResponseEntity<Any> {
-        val user = userRepository.get(id)
-        return if (userRepository.get(id) != null) {
+    @PatchMapping("/paniers/{email}/update-adresse")
+    fun updateAdresse(@PathVariable email: String, @RequestParam Newadresse: String): ResponseEntity<Any> {
+        val user = userRepository.get(email)
+        return if (userRepository.get(email) != null) {
             val updatedPanier = user!!.copy( adresseDeLivraison = Newadresse)
             userRepository.update(updatedPanier)
                 .fold(
@@ -302,7 +258,7 @@ class UserController(val userRepository: UserRepository) {
                     { failure -> ResponseEntity.badRequest().body(failure.message) }
                 )
         } else {
-            throw UserNotFoundError("Panier not found")
+            throw UserNotFoundError(email)
         }
     }
 

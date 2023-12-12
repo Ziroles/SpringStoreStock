@@ -1,6 +1,7 @@
 package iut.r504.projet.springkotlin.config
 
 import iut.r504.projet.springkotlin.errors.ArticleNotFoundError
+import iut.r504.projet.springkotlin.errors.Ensufficientquantity
 import jakarta.validation.ConstraintViolationException
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -25,5 +26,7 @@ class HttpErrorHandler : ResponseEntityExceptionHandler() {
 
     @ExceptionHandler(ArticleNotFoundError::class)
     fun articleNotFound(e: ArticleNotFoundError) = ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.message)
+
+    @ExceptionHandler(Ensufficientquantity::class)
+    fun ensufficientQuantity(e: Ensufficientquantity) = ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(e.message)
 }
-//z

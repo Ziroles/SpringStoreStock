@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate
 
 @RestController
-@RequestMapping("/admin/articles")
+@RequestMapping("/admin")
 @Tag(name = "Administration", description = "Operations related to article administration")
 public class AdminArticleController(val articleRepository: ArticleRepository) {
     @Operation(summary = "Create article")
@@ -27,7 +27,7 @@ public class AdminArticleController(val articleRepository: ArticleRepository) {
             )]),
         ApiResponse(responseCode = "409", description = "Article already exist",
             content = [Content(mediaType = "application/json", schema = Schema(implementation = String::class))])])
-    @PostMapping("/api/article")
+    @PostMapping("/article")
     fun create(@RequestBody @Valid article: ArticleDTO): ResponseEntity<ArticleDTO> {
         return articleRepository.create(article.copy(lastUpdate = LocalDate.now()).asArticle()).fold(
             { success -> ResponseEntity.status(HttpStatus.CREATED).body(success.asArticleDTO()) },
@@ -38,7 +38,7 @@ public class AdminArticleController(val articleRepository: ArticleRepository) {
         ApiResponse(responseCode = "400", description = "Article not found",
             content = [Content(mediaType = "application/json", schema = Schema(implementation = String::class))])
     ])
-    @DeleteMapping("/api/article/{id}")
+    @DeleteMapping("/article/{id}")
     fun delete(@PathVariable id: Int): ResponseEntity<Any> {
         val deleted = articleRepository.delete(id)
         return if (deleted == null) {
@@ -54,7 +54,7 @@ public class AdminArticleController(val articleRepository: ArticleRepository) {
                 schema = Schema(implementation = ArticleDTO::class))]),
         ApiResponse(responseCode = "400", description = "Invalid request",
             content = [Content(mediaType = "application/json", schema = Schema(implementation = String::class))])])
-    @PutMapping("/api/article/{id}")
+    @PutMapping("/article/{id}")
     fun update(@PathVariable id: Int, @RequestBody @Valid article: ArticleDTO): ResponseEntity<Any> =
         if (id != article.id) {
             ResponseEntity.badRequest().body("Invalid id")

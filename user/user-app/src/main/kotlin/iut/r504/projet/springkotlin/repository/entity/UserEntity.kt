@@ -4,12 +4,13 @@ import iut.r504.projet.springkotlin.domain.User
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import jakarta.validation.constraints.Email
 import java.time.LocalDate
 
 @Entity
 @Table(name = "users")
 class UserEntity(
-    @Id val email: String,
+    @Id @Email val email: String,
     val firstName: String,
     val lastName: String,
     val age: Int,

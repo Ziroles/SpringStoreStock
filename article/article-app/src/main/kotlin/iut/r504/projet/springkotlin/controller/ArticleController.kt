@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.tags.Tag
+import iut.r504.projet.springkotlin.errors.Ensufficientquantity
 import iut.r504.projet.springkotlin.repository.ArticleRepository
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Min
@@ -33,8 +35,8 @@ class ArticleController(val articleRepository: ArticleRepository) {
                     schema = Schema(implementation = ArticleDTO::class))
             )])])
     @GetMapping("/article")
-    fun list(@RequestParam(required = false) name: String?) =
-        articleRepository.list(name)
+    fun list() =
+        articleRepository.list()
             .map { it.asArticleDTO() }
             .let {
                 ResponseEntity.ok(it)
@@ -108,21 +110,20 @@ class ArticleController(val articleRepository: ArticleRepository) {
     ])
     @GetMapping("/article/{id}/check-quantity")
     fun checkQuantity(@PathVariable id: Int, @RequestParam @Min(1) quantity: Int): ResponseEntity<Any> {
-        println("check quantity")
         val article = articleRepository.get(id)
-        println(article!!.quantity)
-        println(quantity)
-        return if (articleRepository.get(id) != null) {
-            println(article!!.quantity)
-            println(quantity)
-            if (article!!.quantity >= quantity){
+
+        return if (article != null) {
+
+            if (article.quantity >= quantity) {
                 ResponseEntity.ok(article.asArticleDTO())
-            }else{
-                ResponseEntity.badRequest().body("Not enough quantity")
+            } else {
+                throw Ensufficientquantity("Not enough quantity")
             }
         } else {
             throw ArticleNotFoundError(id)
-        }}
+        }
+    }
+
 
 
 }

@@ -5,3 +5,4 @@ sealed class FunctionalErrors(message: String = "", cause: Exception? = null) :
 
 class ArticleNotFoundError(id: Int) : FunctionalErrors(message = "Article ID n°$id not found")
 
+class Ensufficientquantity(panierid:String) : FunctionalErrors(message = "For panier $panierid each article are not available in sufficient quantity")

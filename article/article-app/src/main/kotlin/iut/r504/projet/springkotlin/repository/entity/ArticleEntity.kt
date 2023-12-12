@@ -7,7 +7,7 @@ import java.time.LocalDate
 @Entity
 @Table(name = "article")
 class ArticleEntity(
-        @Id @GeneratedValue(strategy = GenerationType.IDENTITY) val id: Int,
+        @Id @GeneratedValue(strategy = GenerationType.IDENTITY)  val id: Int = 1,
         val name: String,
         val price: Float,
         val quantity: Int,
