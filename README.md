@@ -5,8 +5,9 @@ PanierApi  : http://localhost:8082/panierapi/swagger-ui/index.html \
 ArticleApi : http://localhost:8083/articleapi/swagger-ui/index.html 
 
 ## Actuellement
-Toutes les routes sont fonctionnelles et respectent la consigne
+Toutes les routes sont fonctionnelles et respectent la consigne \
+Les logs sont tous fait
 
 ## TODO
 -Faire les tests \
--Ajouter les logs 
+

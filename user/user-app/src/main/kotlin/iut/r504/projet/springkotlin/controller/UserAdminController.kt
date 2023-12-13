@@ -11,6 +11,8 @@ import iut.r504.projet.springkotlin.errors.UserNotFoundError
 import iut.r504.projet.springkotlin.repository.UserRepository
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -23,6 +25,7 @@ import java.net.URL
 @RequestMapping("/admin")
 class UserAdminController (val userRepository: UserRepository)
 {
+    private val logger: Logger = LoggerFactory.getLogger(UserAdminController::class.java)
     @Operation(summary = "Create user with cart")
     @ApiResponses(value = [
         ApiResponse(responseCode = "201", description = "User created",
@@ -33,6 +36,7 @@ class UserAdminController (val userRepository: UserRepository)
             content = [Content(mediaType = "application/json", schema = Schema(implementation = String::class))])])
     @PostMapping("/users")
     fun create(@RequestBody @Valid user: UserDTO): ResponseEntity<Any> {
+        logger.info("Request to creat a user with ${user.asUser().email} as email")
         var urlpanier = URL("http://localhost:8082/panierapi/admin/paniers")
         try{
 
@@ -61,7 +65,7 @@ class UserAdminController (val userRepository: UserRepository)
                 val responseCode = connection.responseCode
                 val responseBody = connection.inputStream.bufferedReader().readText()
                 connection.disconnect()
-
+                logger.info("User created with ${user.email} as email")
                 ResponseEntity.status(HttpStatus.CREATED).body(success.asUserDTO())
             },
             { failure -> ResponseEntity.status(HttpStatus.CONFLICT).build() })
@@ -80,15 +84,20 @@ class UserAdminController (val userRepository: UserRepository)
         ApiResponse(responseCode = "400", description = "Invalid request",
             content = [Content(mediaType = "application/json", schema = Schema(implementation = String::class))])])
     @PutMapping("/users/{email}")
-    fun update(@PathVariable @Email email: String, @RequestBody @Valid user: UserDTO): ResponseEntity<Any> =
-        if (email != user.email) {
+    fun update(@PathVariable @Email email: String, @RequestBody @Valid user: UserDTO): ResponseEntity<Any> {
+        logger.info("Request to update user $email")
+        return if (email != user.email) {
             throw UserNotFoundError(email)
         } else {
             userRepository.update(user.asUser()).fold(
-                { success -> ResponseEntity.ok(success.asUserDTO()) },
+                { success ->
+                    logger.info("User updated")
+                    ResponseEntity.ok(success.asUserDTO()) },
                 { failure -> ResponseEntity.badRequest().body(failure.message) }
             )
         }
+
+    }
 
     @Operation(summary = "Delete user by email")
     @ApiResponses(value = [
@@ -98,7 +107,7 @@ class UserAdminController (val userRepository: UserRepository)
     ])
     @DeleteMapping("/users/{email}")
     fun delete(@PathVariable @Email email: String): ResponseEntity<Any> {
-
+        logger.info("Request to deleted $email user")
         val deleted = userRepository.delete(email)
         return if (deleted == null) {
             throw UserNotFoundError(email)
@@ -109,16 +118,19 @@ class UserAdminController (val userRepository: UserRepository)
                 val connection = URL(deletePanierUrl).openConnection() as HttpURLConnection
                 connection.requestMethod = "DELETE"
 
-                val responseCode = connection.responseCode
-                if (responseCode == HttpURLConnection.HTTP_NO_CONTENT) {
+                when (val responseCode = connection.responseCode) {
+                    HttpURLConnection.HTTP_NO_CONTENT -> {
 
-                    ResponseEntity.noContent()
-                } else if(responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
-                    throw UserNotFoundError(email)
-                }else if (responseCode == HttpURLConnection.HTTP_BAD_REQUEST || responseCode == HttpURLConnection.HTTP_INTERNAL_ERROR){
-                    return ResponseEntity.badRequest().body("Error: $responseCode")
+                        ResponseEntity.noContent()
+                    }
+                    HttpURLConnection.HTTP_NOT_FOUND -> {
+                        throw UserNotFoundError(email)
+                    }
+                    HttpURLConnection.HTTP_BAD_REQUEST, HttpURLConnection.HTTP_INTERNAL_ERROR -> {
+                        return ResponseEntity.badRequest().body("Error: $responseCode")
+                    }
                 }
-
+                logger.info("User deleted")
                 connection.disconnect()
                 ResponseEntity.ok("User deleted")
             } catch (e: ConnectException) {

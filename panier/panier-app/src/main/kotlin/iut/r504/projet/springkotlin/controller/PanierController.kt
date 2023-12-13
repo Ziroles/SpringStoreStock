@@ -20,6 +20,8 @@ import iut.r504.projet.springkotlin.errors.ArticleNotFoundError
 import iut.r504.projet.springkotlin.errors.Ensufficientquantity
 import iut.r504.projet.springkotlin.repository.PanierRepository
 import jakarta.validation.constraints.Min
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
@@ -32,7 +34,7 @@ import java.net.URL
 @Validated
 class PanierController(private val panierRepository: PanierRepository) {
     val urlarticle = URL("http://localhost:8083/articleapi/article/")
-
+    private val logger: Logger = LoggerFactory.getLogger(PanierController::class.java)
 
     @Operation(summary = "List paniers")
     @ApiResponses(value = [
@@ -42,13 +44,14 @@ class PanierController(private val panierRepository: PanierRepository) {
                                 schema = Schema(implementation = PanierDTO::class))
                 )])])
     @GetMapping("/paniers")
-    fun list(): ResponseEntity<List<PanierDTO>> =
-            panierRepository.list()
-                    .map { it.toPanierDTO() }
-                    .let {
-                        ResponseEntity.ok(it)
-                    }
+    fun list(): ResponseEntity<List<Any>> {
+        logger.info("Request for listing all panier")
+        panierRepository.list()
+            .map { it.toPanierDTO() }
+            .let {return  ResponseEntity.ok(it)
+            }
 
+    }
     @Operation(summary = "Get panier by id")
     @ApiResponses(value = [
         ApiResponse(responseCode = "200", description = "The panier",
@@ -59,8 +62,10 @@ class PanierController(private val panierRepository: PanierRepository) {
     ])
     @GetMapping("/paniers/{email}")
     fun findOne(@PathVariable email: String): ResponseEntity<PanierDTO> {
+        logger.info("Request for getting one panier")
         val panier = panierRepository.get(email.replace("%40", "@"))
         return if (panier != null) {
+            logger.info("Panier found")
             ResponseEntity.ok(panier.toPanierDTO())
         } else {
             throw PanierNotFoundError("Panier not found")
@@ -78,7 +83,7 @@ class PanierController(private val panierRepository: PanierRepository) {
     ])
     @PutMapping("/paniers/validate/{email}")
     fun validate(@PathVariable email: String): ResponseEntity<Any> {
-
+        logger.info("Request to validate a user panier")
         try {
             var panier = panierRepository.get(email.replace("%40", "@"))
 
@@ -106,7 +111,7 @@ class PanierController(private val panierRepository: PanierRepository) {
                     connection.disconnect()
                 }
             }
-
+            logger.info("Each article is in enough quantity")
             panier!!.items.forEach(){
                 var url = urlarticle.toString() + it.articleId + "/remove-quantity?quantity=" + it.quantite
                 var connection = URL(url).openConnection() as HttpURLConnection
@@ -129,10 +134,10 @@ class PanierController(private val panierRepository: PanierRepository) {
                 }
             }
             panierRepository.update(panier.copy(items = mutableListOf()))
-
+            logger.info("Panier of $email is validate")
             return ResponseEntity.status(HttpStatus.OK).body(panier.toPanierDTO())
         } catch (e: ConnectException) {
-            // Handle connection refusal here
+
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Connection refused: ${e.message}")
         }
     }
@@ -148,7 +153,7 @@ class PanierController(private val panierRepository: PanierRepository) {
     ])
     @PutMapping("/paniers/{email}/add-article")
     fun addArticle(@PathVariable email: String, @RequestParam @Min(1) articleId: Long, @RequestParam @Min(1) quantite: Int): ResponseEntity<Any> {
-
+        logger.info("Request to add article number $articleId to $email panier ")
         var panier = panierRepository.get(email.replace("%40", "@"))
 
         try{
@@ -185,7 +190,7 @@ class PanierController(private val panierRepository: PanierRepository) {
                 panier.items.add( ArticleQuantite(articleId, quantite))
             }
 
-
+            logger.info("The quantity as been add")
             panierRepository.update(panier)
                     .fold(
                             { success -> ResponseEntity.ok(success.toPanierDTO()) },
@@ -208,6 +213,7 @@ class PanierController(private val panierRepository: PanierRepository) {
     ])
     @PutMapping("/paniers/{email}/remove-article")
     fun removeArticle(@PathVariable email: String, @RequestParam @Min(1) articleId: Long, @RequestParam @Min(1) quantite: Int): ResponseEntity<Any> {
+        logger.info("Request to remove article number $articleId  from $email panier")
         val panier = panierRepository.get(email.replace("%40", "@"))
         return if (panierRepository.get(email) != null) {
             if (panier!!.items.find { it.articleId == articleId } != null) {
@@ -216,13 +222,16 @@ class PanierController(private val panierRepository: PanierRepository) {
                 throw ArticleNotFoundError(articleId.toString())
             }
             if (panier!!.items.find { (it.articleId == articleId) && it.quantite <= 0 } != null){
+                logger.info("Article removed")
                 panier.items.removeIf { it.articleId == articleId }
             }
 
 
             panierRepository.update(panier)
                     .fold(
-                            { success -> ResponseEntity.ok(success.toPanierDTO()) },
+                            { success ->
+                                logger.info("Request for listing all panier")
+                                ResponseEntity.ok(success.toPanierDTO()) },
                             { failure -> ResponseEntity.badRequest().body(failure.message) }
                     )
         } else {

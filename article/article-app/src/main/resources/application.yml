@@ -2,7 +2,9 @@ server:
   port: 8083
   servlet:
     context-path: /articleapi
-
+logging:
+  level:
+    root: info
 spring:
   devtools:
     restart:

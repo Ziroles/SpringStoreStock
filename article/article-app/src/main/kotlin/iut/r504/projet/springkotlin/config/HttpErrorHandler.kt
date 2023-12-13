@@ -17,12 +17,12 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 class HttpErrorHandler : ResponseEntityExceptionHandler() {
 
     override fun handleMethodArgumentNotValid(ex: MethodArgumentNotValidException, headers: HttpHeaders, status: HttpStatusCode, request: WebRequest): ResponseEntity<Any>? {
-        return ResponseEntity.badRequest().body("You're arg is invalid")
+        return ResponseEntity.badRequest().body("You're args are invalid")
     }
 
     @ExceptionHandler(ConstraintViolationException::class)
     fun constraintViolationException(e: ConstraintViolationException) =
-        ResponseEntity.badRequest().body("Noooo")
+        ResponseEntity.badRequest().body("Your request is invalid and cannot be processed")
 
     @ExceptionHandler(ArticleNotFoundError::class)
     fun articleNotFound(e: ArticleNotFoundError) = ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.message)

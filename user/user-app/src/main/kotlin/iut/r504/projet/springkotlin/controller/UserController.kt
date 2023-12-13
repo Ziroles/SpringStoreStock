@@ -15,6 +15,8 @@ import iut.r504.projet.springkotlin.errors.Ensufficientquantity
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.Min
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
@@ -31,7 +33,7 @@ import java.time.LocalDate
 @Validated
 class UserController(val userRepository: UserRepository) {
     var urlpanier = URL("http://localhost:8082/panierapi/paniers")
-
+    private val logger: Logger = LoggerFactory.getLogger(UserController::class.java)
 
 
     @Operation(summary = "List users")
@@ -42,12 +44,13 @@ class UserController(val userRepository: UserRepository) {
                     schema = Schema(implementation = UserDTO::class))
             )])])
     @GetMapping("/users")
-    fun list(@RequestParam(required = false) @Min(15) age: Int?) =
-        userRepository.list(age)
+    fun list(@RequestParam(required = false) @Min(15) age: Int?) {
+        logger.info("Request to get all user")
+        return userRepository.list(age)
             .map { it.asUserDTO() }
             .let {
                 ResponseEntity.ok(it)
-            }
+            }}
 
     @Operation(summary = "Get user by email")
     @ApiResponses(value = [
@@ -59,8 +62,10 @@ class UserController(val userRepository: UserRepository) {
     ])
     @GetMapping("/users/{email}")
     fun findOne(@PathVariable @Email email: String): ResponseEntity<UserDTO> {
+        logger.info("Request to find one user")
         val user = userRepository.get(email)
         return if (user != null) {
+            logger.info("User found")
             ResponseEntity.ok(user.asUserDTO())
         } else {
             throw UserNotFoundError(email)
@@ -80,6 +85,7 @@ class UserController(val userRepository: UserRepository) {
     ])
     @PutMapping("/users/validate/{email}")
     fun validate(@PathVariable @Email email: String): ResponseEntity<Any> {
+        logger.info("Request to validate the panier of $email user")
         val user = userRepository.get(email)
 
         try{
@@ -106,7 +112,9 @@ class UserController(val userRepository: UserRepository) {
             val updatedUser = user.copy(lastpurchase = LocalDate.now())
             userRepository.update(updatedUser)
                 .fold(
-                    { success -> ResponseEntity.ok(success.asUserDTO()) },
+                    { success ->
+                        logger.info("Panier validated")
+                        ResponseEntity.ok(success.asUserDTO()) },
                     { failure -> ResponseEntity.badRequest().body(failure.message) }
                 )
         } else {
@@ -131,6 +139,7 @@ class UserController(val userRepository: UserRepository) {
         @RequestParam @Min(1) articleid: Int,
         @RequestParam @Min(1) quantity: Int
     ): ResponseEntity<Any> {
+        logger.info("Request to add article to $email panier")
         val user = userRepository.get(email)
         try{
         return if (user != null) {
@@ -156,6 +165,7 @@ class UserController(val userRepository: UserRepository) {
             } finally {
                 connection.disconnect()
             }
+            logger.info("Article added to $email panier")
             ResponseEntity.ok("Article add to user panier")
         } else {
             throw UserNotFoundError(email)
@@ -181,6 +191,7 @@ class UserController(val userRepository: UserRepository) {
         @RequestParam @Min(1) quantity: Int
     ): ResponseEntity<Any> {
         val user = userRepository.get(email)
+        logger.info("Request to remove one article from $email panier")
         try{
 
             return if (user != null) {
@@ -205,8 +216,8 @@ class UserController(val userRepository: UserRepository) {
                 }
 
 
-
-                ResponseEntity.ok("article deleted from user panier")
+                logger.info("Article deleted from user panier")
+                ResponseEntity.ok("Article deleted from user panier")
             } else {
                 throw UserNotFoundError(email)
             }
@@ -227,12 +238,15 @@ class UserController(val userRepository: UserRepository) {
     ])
     @PatchMapping("/paniers/{email}/change-newletter")
     fun changeNewletter(@PathVariable email: String): ResponseEntity<Any> {
+        logger.info("Request to change newletter status of $email user")
         val user = userRepository.get(email)
         return if (userRepository.get(email) != null) {
             val updatedPanier = user!!.copy( newsletterfollower =  !user.newsletterfollower)
             userRepository.update(updatedPanier)
                 .fold(
-                    { success -> ResponseEntity.ok(success.asUserDTO()) },
+                    { success ->
+                        logger.info("Newletter status of $email user changed")
+                        ResponseEntity.ok(success.asUserDTO()) },
                     { failure -> ResponseEntity.badRequest().body(failure.message) }
                 )
         } else {
@@ -249,12 +263,15 @@ class UserController(val userRepository: UserRepository) {
     ])
     @PatchMapping("/paniers/{email}/update-adresse")
     fun updateAdresse(@PathVariable email: String, @RequestParam Newadresse: String): ResponseEntity<Any> {
+        logger.info("Request to change deliveryadress of $email user")
         val user = userRepository.get(email)
         return if (userRepository.get(email) != null) {
             val updatedPanier = user!!.copy( adresseDeLivraison = Newadresse)
             userRepository.update(updatedPanier)
                 .fold(
-                    { success -> ResponseEntity.ok(success.asUserDTO()) },
+                    { success ->
+                        logger.info("Adress change for $email user")
+                        ResponseEntity.ok(success.asUserDTO()) },
                     { failure -> ResponseEntity.badRequest().body(failure.message) }
                 )
         } else {
