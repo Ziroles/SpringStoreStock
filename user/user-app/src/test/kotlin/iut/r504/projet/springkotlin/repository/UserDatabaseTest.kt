@@ -1,4 +1,4 @@
-package bzh.zomzog.prez.springkotlin.repository
+package iut.r504.projet.springkotlin.repository
 
 import assertk.assertThat
 import assertk.assertions.*
@@ -6,6 +6,7 @@ import iut.r504.projet.springkotlin.domain.User
 import iut.r504.projet.springkotlin.repository.UserRepository
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import java.time.LocalDate
 
 abstract class UserDatabaseTest {
 
@@ -40,7 +41,7 @@ abstract class UserDatabaseTest {
         fun `create twice with different email is ok`() {
             // GIVEN
             val user = defaultUser()
-            val user2 = defaultUser(email = "another@email.pony")
+            val user2 = defaultUser(email = "another@email.fr")
             repository.create(user)
             // WHEN
             val result = repository.create(user2)
@@ -56,8 +57,8 @@ abstract class UserDatabaseTest {
         fun `list all users`() {
             // GIVEN
             val user = defaultUser()
-            val user2 = defaultUser(email = "another@email.pony")
-            val user3 = defaultUser(email = "anOld@email.pony", age = 1337)
+            val user2 = defaultUser(email = "another@email.fr")
+            val user3 = defaultUser(email = "anOld@email.fr", age = 1337)
             repository.create(user)
             repository.create(user2)
             repository.create(user3)
@@ -71,8 +72,8 @@ abstract class UserDatabaseTest {
         fun `list users filtered by age`() {
             // GIVEN
             val user = defaultUser()
-            val user2 = defaultUser(email = "another@email.pony")
-            val user3 = defaultUser(email = "anOld@email.pony", age = 1337)
+            val user2 = defaultUser(email = "another@email.fr")
+            val user3 = defaultUser(email = "anOld@email.fr", age = 1337)
             repository.create(user)
             repository.create(user2)
             repository.create(user3)
@@ -160,6 +161,9 @@ abstract class UserDatabaseTest {
         email: String = "j@d.com",
         firstName: String = "first",
         lastName: String = "last",
-        age: Int = 42
-    ) = User(email, firstName, lastName, age)
+        age: Int = 42,
+        adresseDeLivraison: String = "address",
+        newsletterfollower: Boolean = false,
+        lastpurchase: LocalDate = LocalDate.of(2023,1,1)
+    ) = User(email, firstName, lastName, age, adresseDeLivraison, newsletterfollower, lastpurchase)
 }
