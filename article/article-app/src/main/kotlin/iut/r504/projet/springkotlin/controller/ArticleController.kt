@@ -14,7 +14,8 @@ import iut.r504.projet.springkotlin.errors.Ensufficientquantity
 import iut.r504.projet.springkotlin.repository.ArticleRepository
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Min
-
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
@@ -22,15 +23,12 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.bind.annotation.RestController
 import java.time.LocalDate
 
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-
 @RestController
 @Validated
 class ArticleController(val articleRepository: ArticleRepository) {
-
-
     private val logger: Logger = LoggerFactory.getLogger(ArticleController::class.java)
+
+
     @Operation(summary = "List articles")
     @ApiResponses(value = [
         ApiResponse(responseCode = "200", description = "List articles",
@@ -39,9 +37,9 @@ class ArticleController(val articleRepository: ArticleRepository) {
                     schema = Schema(implementation = ArticleDTO::class))
             )])])
     @GetMapping("/article")
-    fun list() {
-        logger.info("Article list requested")
-        articleRepository.list()
+    fun list() :ResponseEntity<Any>{
+        logger.info("Request to list all articles")
+        return articleRepository.list()
             .map { it.asArticleDTO() }
             .let {
                 ResponseEntity.ok(it)
@@ -57,13 +55,10 @@ class ArticleController(val articleRepository: ArticleRepository) {
     ])
     @GetMapping("/article/{id}")
     fun findOne(@PathVariable id: Int): ResponseEntity<ArticleDTO> {
-
-        logger.info("Article ${id} requested")
+        logger.info("Request to get Article : $id")
         val article = articleRepository.get(id)
-
-
         return if (article != null) {
-            logger.info("Article ${id} found")
+            logger.info("Article found : $id")
             ResponseEntity.ok(article.asArticleDTO())
         } else {
             throw ArticleNotFoundError(id)
@@ -80,14 +75,14 @@ class ArticleController(val articleRepository: ArticleRepository) {
     ])
     @PatchMapping("/article/{id}/add-quantity")
     fun addQuantity(@PathVariable id: Int, @RequestParam @Min(1) quantity: Int): ResponseEntity<Any> {
-        logger.info("Article ${id} requested to add quantity")
+        logger.info("Request to add quantity to Article : $id")
         val article = articleRepository.get(id)
         return if (articleRepository.get(id) != null) {
             val updatedArticle = article!!.copy(quantity = article.quantity + quantity, lastUpdate = LocalDate.now())
             articleRepository.update(updatedArticle)
                 .fold(
                     { success ->
-                        logger.info("Article ${id} quantity added")
+                        logger.info("Quantity added to Article : $id")
                         ResponseEntity.ok(success.asArticleDTO()) },
                     { failure -> ResponseEntity.badRequest().body(failure.message) }
                 )
@@ -103,13 +98,14 @@ class ArticleController(val articleRepository: ArticleRepository) {
     ])
     @PutMapping("/article/{id}/remove-quantity")
     fun removeQuantity(@PathVariable id: Int, @RequestParam @Min(1) quantity: Int): ResponseEntity<Any> {
-        logger.info("Article ${id} requested to remove quantity")
+        logger.info("Request to remove quantity to Article : $id")
         val article = articleRepository.get(id)
         return if (articleRepository.get(id) != null) {
             val updatedArticle = article!!.copy(quantity = article.quantity - quantity, lastUpdate = LocalDate.now())
             articleRepository.update(updatedArticle)
                 .fold(
-                    { success -> logger.info("Article ${id}, ${quantity} quantity removed")
+                    { success ->
+                        logger.info("Quantity removed to Article : $id")
                         ResponseEntity.ok(success.asArticleDTO()) },
                     { failure -> ResponseEntity.badRequest().body(failure.message) }
                 )
@@ -125,13 +121,14 @@ class ArticleController(val articleRepository: ArticleRepository) {
     ])
     @GetMapping("/article/{id}/check-quantity")
     fun checkQuantity(@PathVariable id: Int, @RequestParam @Min(1) quantity: Int): ResponseEntity<Any> {
-        logger.info("Article ${id} requested to check quantity")
+
+        logger.info("Request to check quantity to Article : $id")
         val article = articleRepository.get(id)
 
         return if (article != null) {
 
             if (article.quantity >= quantity) {
-                logger.info("Article ${id} quantity is enough")
+                logger.info("Quantity is enough to Article : $id")
                 ResponseEntity.ok(article.asArticleDTO())
             } else {
                 throw Ensufficientquantity("Not enough quantity")

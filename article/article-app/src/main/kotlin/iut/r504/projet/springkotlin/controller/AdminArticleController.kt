@@ -33,9 +33,10 @@ public class AdminArticleController(val articleRepository: ArticleRepository) {
             content = [Content(mediaType = "application/json", schema = Schema(implementation = String::class))])])
     @PostMapping("/article")
     fun create(@RequestBody @Valid article: ArticleDTO): ResponseEntity<ArticleDTO> {
-        logger.info("Request to creat Article : ${article.name}")
+        logger.info("Request to create Article : ${article.name}")
         return articleRepository.create(article.copy(lastUpdate = LocalDate.now()).asArticle()).fold(
-            { success -> logger.info("Article created : ${success.name}")
+            { success ->
+                logger.info("Article created : ${article.name}")
                 ResponseEntity.status(HttpStatus.CREATED).body(success.asArticleDTO()) },
             { failure -> ResponseEntity.status(HttpStatus.CONFLICT).build() })}
     @Operation(summary = "Delete article by id")
@@ -46,7 +47,7 @@ public class AdminArticleController(val articleRepository: ArticleRepository) {
     ])
     @DeleteMapping("/article/{id}")
     fun delete(@PathVariable id: Int): ResponseEntity<Any> {
-        logger.info("Request to delet Article : $id")
+        logger.info("Request to delete Article : $id")
         val deleted = articleRepository.delete(id)
         return if (deleted == null) {
             ResponseEntity.badRequest().body("User not found")
@@ -65,16 +66,15 @@ public class AdminArticleController(val articleRepository: ArticleRepository) {
     @PutMapping("/article/{id}")
     fun update(@PathVariable id: Int, @RequestBody @Valid article: ArticleDTO): ResponseEntity<Any> {
         logger.info("Request to update Article : ${article.name}")
-        if (id != article.id) {
-            throw ArticleNotFoundError(id)
+        return if (id != article.id) {
+            throw  ArticleNotFoundError(id)
         } else {
 
             articleRepository.update(article.copy(lastUpdate = LocalDate.now()).asArticle()).fold(
-                { success -> ResponseEntity.ok(success.asArticleDTO()) },
+                { success ->
+                    logger.info("Article updated : ${article.name}")
+                    ResponseEntity.ok(success.asArticleDTO()) },
                 { failure -> ResponseEntity.badRequest().body(failure.message) }
             )
-        }
-        logger.info("Article updated : ${article.name}")
-        return ResponseEntity.ok(article)
-    }
+        }}
 }
