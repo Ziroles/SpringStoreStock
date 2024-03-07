@@ -6,8 +6,8 @@ ArticleApi : http://localhost:8083/articleapi/swagger-ui/index.html
 
 ## Actuellement
 Toutes les routes sont fonctionnelles et respectent la consigne \
-Les logs sont tous fait
+Les logs sont tous faits
+Tests réalisés
 
-## TODO
--Faire les tests \
+
 
