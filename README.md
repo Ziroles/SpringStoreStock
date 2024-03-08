@@ -30,7 +30,7 @@ As of now, the project is fully operational with all endpoints functioning as pe
 
 ## Project Insights
 
-This project was a small study project during our last year of study at OUT of Nantes
+This project was a small study project during our last year of study at IUT of Nantes
 
 ![Project Logo](https://media.licdn.com/dms/image/C4E03AQErvOLSbwpuRg/profile-displayphoto-shrink_800_800/0/1651179636283?e=2147483647&v=beta&t=ec2-Q-NWjyx_CX_pWzc2NyuMk24td0_gOZaWeVZdo-E)
 
